@@ -1,0 +1,6 @@
+@HorrorJournal.Api_HostAddress = http://localhost:5073
+
+GET {{HorrorJournal.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

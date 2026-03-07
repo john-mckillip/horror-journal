@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="HorrorJournal.Api/HorrorJournal.Api.csproj" />
+  <Project Path="HorrorJournal.Tests/HorrorJournal.Tests.csproj" />
+</Solution>
