@@ -1,4 +1,5 @@
 using HorrorJournal.Api.Repositories;
+using HorrorJournal.Api.Services;
 using HorrorJournal.Api.Settings;
 using MongoDB.Driver;
 
@@ -20,6 +21,7 @@ builder.Services.AddSingleton<IMongoClient>(sp =>
 });
 
 builder.Services.AddScoped<IFilmRepository, FilmRepository>();
+builder.Services.AddHostedService<IndexInitializer>();
 
 var app = builder.Build();
 
