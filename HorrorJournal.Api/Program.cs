@@ -1,3 +1,4 @@
+using HorrorJournal.Api.Endpoints;
 using HorrorJournal.Api.Repositories;
 using HorrorJournal.Api.Services;
 using HorrorJournal.Api.Settings;
@@ -32,5 +33,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.MapFilmEndpoints();
 
 await app.RunAsync();
