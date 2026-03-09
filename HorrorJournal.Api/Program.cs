@@ -23,6 +23,7 @@ builder.Services.AddSingleton<IMongoClient>(sp =>
 
 builder.Services.AddScoped<IFilmRepository, FilmRepository>();
 builder.Services.AddHostedService<IndexInitializer>();
+builder.Services.AddHostedService<FilmChangeStreamService>();
 
 var app = builder.Build();
 

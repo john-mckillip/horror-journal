@@ -144,7 +144,7 @@ public class FilmRepository : IFilmRepository
         return stats;
     }
 
-    private class FilmUnwound
+    private sealed class FilmUnwound
     {
         public string Id { get; set; } = null!;
         public string Subgenres { get; set; } = null!;

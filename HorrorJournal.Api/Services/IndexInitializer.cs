@@ -5,16 +5,10 @@ using MongoDB.Driver;
 
 namespace HorrorJournal.Api.Services;
 
-public class IndexInitializer : IHostedService
+public class IndexInitializer(IMongoClient client, IOptions<MongoDbSettings> settings) : IHostedService
 {
-    private readonly IMongoClient _client;
-    private readonly MongoDbSettings _settings;
-
-    public IndexInitializer(IMongoClient client, IOptions<MongoDbSettings> settings)
-    {
-        _client = client;
-        _settings = settings.Value;
-    }
+    private readonly IMongoClient _client = client;
+    private readonly MongoDbSettings _settings = settings.Value;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
