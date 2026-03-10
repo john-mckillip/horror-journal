@@ -48,5 +48,5 @@ public interface IFilmRepository
     /// Retrieves statistics about the horror films in the journal, such as the total number of films, the number of films by status (watched, wishlist, abandoned), the average rating, and other relevant metrics. The method returns a FilmStats object containing these statistics, allowing users to gain insights into their horror film collection and track their viewing habits over time. The repository implementation will handle the calculation and retrieval of these statistics from the underlying data store (e.g., MongoDB).
     /// </summary>
     /// <returns></returns>
-    Task<FilmStats> GetStatsAsync();
+    Task<FilmStats> GetStatsAsync(CancellationToken ct = default);
 }

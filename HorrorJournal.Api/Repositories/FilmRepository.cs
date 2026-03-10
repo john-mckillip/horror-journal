@@ -9,6 +9,11 @@ namespace HorrorJournal.Api.Repositories;
 
 public class FilmRepository : IFilmRepository
 {
+    private const string CountField = "count";
+    private const string GroupStage = "$group";
+    private const string IdField = "_id";
+    private const string SumOp = "$sum";
+
     private readonly IMongoCollection<Film> _films;
 
     public FilmRepository(IMongoClient client, IOptions<MongoDbSettings> settings)
@@ -107,46 +112,150 @@ public class FilmRepository : IFilmRepository
         return result.DeletedCount > 0;
     }
 
-    public async Task<FilmStats> GetStatsAsync()
+    /// <summary>
+    /// Uses a single $facet aggregation pipeline to compute all stats in one round-trip.
+    /// Each facet runs an independent sub-pipeline against the films collection:
+    ///   - totalCount: counts all documents
+    ///   - countByStatus: groups by status field
+    ///   - averageRating: filters to rated films, then computes $avg
+    ///   - topSubgenres: $unwind subgenres array, group, sort desc, limit 5
+    ///   - filmsPerYear: filters watched films with a watchedOn date, groups by year
+    ///   - mostWatchedDirector: filters watched films, groups by director, sorts desc, limits 1
+    /// </summary>
+    public async Task<FilmStats> GetStatsAsync(CancellationToken ct = default)
+    {
+        var watchedFilter = new BsonDocument("status", FilmStatus.Watched.ToString());
+
+        // $facet runs all sub-pipelines in a single aggregation pass
+        var facetStage = new BsonDocument("$facet", new BsonDocument
+        {
+            { "totalCount", new BsonArray
+                {
+                    new BsonDocument("$count", CountField)
+                }
+            },
+            { "countByStatus", new BsonArray
+                {
+                    new BsonDocument(GroupStage, new BsonDocument
+                    {
+                        { IdField, "$status" },
+                        { CountField, new BsonDocument(SumOp, 1) }
+                    })
+                }
+            },
+            { "averageRating", new BsonArray
+                {
+                    new BsonDocument("$match", new BsonDocument("rating", new BsonDocument("$ne", BsonNull.Value))),
+                    new BsonDocument(GroupStage, new BsonDocument
+                    {
+                        { IdField, BsonNull.Value },
+                        { "avg", new BsonDocument("$avg", "$rating") }
+                    })
+                }
+            },
+            { "topSubgenres", new BsonArray
+                {
+                    new BsonDocument("$unwind", "$subgenres"),
+                    new BsonDocument(GroupStage, new BsonDocument
+                    {
+                        { IdField, "$subgenres" },
+                        { CountField, new BsonDocument(SumOp, 1) }
+                    }),
+                    new BsonDocument("$sort", new BsonDocument(CountField, -1)),
+                    new BsonDocument("$limit", 5)
+                }
+            },
+            { "filmsPerYear", new BsonArray
+                {
+                    new BsonDocument("$match", new BsonDocument
+                    {
+                        { "status", FilmStatus.Watched.ToString() },
+                        { "watchedOn", new BsonDocument("$ne", BsonNull.Value) }
+                    }),
+                    new BsonDocument(GroupStage, new BsonDocument
+                    {
+                        { IdField, new BsonDocument("$year", "$watchedOn") },
+                        { CountField, new BsonDocument(SumOp, 1) }
+                    }),
+                    new BsonDocument("$sort", new BsonDocument(IdField, 1))
+                }
+            },
+            { "mostWatchedDirector", new BsonArray
+                {
+                    new BsonDocument("$match", watchedFilter),
+                    new BsonDocument(GroupStage, new BsonDocument
+                    {
+                        { IdField, "$director" },
+                        { CountField, new BsonDocument(SumOp, 1) }
+                    }),
+                    new BsonDocument("$sort", new BsonDocument(CountField, -1)),
+                    new BsonDocument("$limit", 1)
+                }
+            }
+        });
+
+        var result = await _films
+            .Aggregate()
+            .AppendStage<BsonDocument>(facetStage)
+            .FirstOrDefaultAsync(ct);
+
+        return MapStatsFromBson(result);
+    }
+    /// <summary>
+    /// Maps the raw BsonDocument result from the aggregation pipeline into a strongly-typed FilmStats object.
+    /// </summary>
+    /// <param name="result">The BsonDocument result from the aggregation pipeline.</param>
+    /// <returns>A FilmStats object containing the mapped statistics.</returns>
+    private static FilmStats MapStatsFromBson(BsonDocument result)
     {
         var stats = new FilmStats();
 
+        if (result is null)
+            return stats;
+
+        // Total count
+        var totalArr = result["totalCount"].AsBsonArray;
+        stats.TotalCount = totalArr.Count > 0
+            ? totalArr[0].AsBsonDocument[CountField].AsInt32
+            : 0;
+
         // Count by status
-        var statusCounts = await _films.Aggregate()
-            .Group(f => f.Status, g => new { Status = g.Key, Count = g.Count() })
-            .ToListAsync();
+        foreach (var doc in result["countByStatus"].AsBsonArray.Select(item => item.AsBsonDocument))
+        {
+            if (Enum.TryParse<FilmStatus>(doc[IdField].AsString, out var status))
+                stats.CountByStatus[status] = doc[CountField].AsInt32;
+        }
 
-        foreach (var sc in statusCounts)
-            stats.CountByStatus[sc.Status] = sc.Count;
+        // Average rating
+        var avgArr = result["averageRating"].AsBsonArray;
+        stats.AverageRating = avgArr.Count > 0
+            ? Math.Round(avgArr[0].AsBsonDocument["avg"].ToDouble(), 1)
+            : null;
 
-        // Average rating (only rated films)
-        var ratedFilms = await _films
-            .Find(f => f.Rating != null)
-            .ToListAsync();
-
-        if (ratedFilms.Count > 0)
-            stats.AverageRating = ratedFilms.Average(f => f.Rating!.Value);
-
-        // Top subgenres
-        var subgenreCounts = await _films.Aggregate()
-            .Unwind<Film, FilmUnwound>(f => f.Subgenres)
-            .Group(f => f.Subgenres, g => new SubgenreCount
+        // Top 5 subgenres
+        stats.TopSubgenres = [.. result["topSubgenres"].AsBsonArray
+            .Select(item => item.AsBsonDocument)
+            .Select(doc => new SubgenreCount
             {
-                Subgenre = g.Key,
-                Count = g.Count()
-            })
-            .SortByDescending(s => s.Count)
-            .Limit(10)
-            .ToListAsync();
+                Subgenre = doc[IdField].AsString,
+                Count = doc[CountField].AsInt32
+            })];
 
-        stats.TopSubgenres = subgenreCounts;
+        // Films watched per year
+        stats.FilmsPerYear = [.. result["filmsPerYear"].AsBsonArray
+            .Select(item => item.AsBsonDocument)
+            .Select(doc => new YearCount
+            {
+                Year = doc[IdField].AsInt32,
+                Count = doc[CountField].AsInt32
+            })];
+
+        // Most watched director
+        var directorArr = result["mostWatchedDirector"].AsBsonArray;
+        stats.MostWatchedDirector = directorArr.Count > 0
+            ? directorArr[0].AsBsonDocument[IdField].AsString
+            : null;
 
         return stats;
-    }
-
-    private sealed class FilmUnwound
-    {
-        public string Id { get; set; } = null!;
-        public string Subgenres { get; set; } = null!;
     }
 }

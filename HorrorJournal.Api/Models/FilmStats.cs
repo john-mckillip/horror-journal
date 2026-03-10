@@ -4,6 +4,7 @@ namespace HorrorJournal.Api.Models;
 /// </summary>
 public class FilmStats
 {
+    public int TotalCount { get; set; }
     /// <summary>
     /// A dictionary that counts the number of films in the journal for each FilmStatus (Watched, Wishlist, Abandoned). This allows users to see how many films they have watched, how many are on their wishlist, and how many they have abandoned, providing insights into their viewing habits and preferences.
     /// The keys of the dictionary are of type FilmStatus, and the values are integers representing the count of films for each status category.
@@ -26,6 +27,8 @@ public class FilmStats
     /// For example, if a user has 10 films in the "Slasher" subgenre, 7 films in the "Supernatural" subgenre, and 5 films in the "Psychological" subgenre, the TopSubgenres list would contain the following entries:
     /// </summary>
     public List<SubgenreCount> TopSubgenres { get; set; } = [];
+    public List<YearCount> FilmsPerYear { get; set; } = [];
+    public string? MostWatchedDirector { get; set; }
 }
 /// <summary>
 /// Represents a count of horror films for a specific subgenre in the journal. This class is used as part of the FilmStats to provide insights into the distribution of subgenres among the user's horror film collection. The Subgenre property contains the name of the subgenre (e.g., "Slasher", "Supernatural"), while the Count property indicates how many films in the journal belong to that subgenre. This information can help users identify which types of horror films they tend to watch or prefer, and can be used to generate summaries and visualizations based on subgenre preferences.
@@ -40,6 +43,20 @@ public class SubgenreCount
     public required string Subgenre { get; set; }
     /// <summary>
     /// The count of horror films in the journal that belong to the specified subgenre. This property indicates how many films in the user's horror film collection are categorized under the given subgenre, providing insights into the user's preferences and trends in their viewing habits. For example, if a user has 10 films in the "Slasher" subgenre, the Count property would be set to 10 for that entry in the TopSubgenres list.
+    /// </summary>
+    public int Count { get; set; }
+}
+/// <summary>
+/// Represents a count of horror films for a specific year in the journal. This class is used as part of the FilmStats to provide insights into the distribution of films watched by year among the user's horror film collection. The Year property contains the specific year (e.g., 2020, 2021), while the Count property indicates how many films in the journal were watched in that year. This information can help users identify trends in their viewing habits over time, such as which years they watched more films or if there are any particular years that stand out in their horror film collection.
+/// </summary>
+public class YearCount
+{
+    /// <summary>
+    /// The specific year for which the count of horror films is being provided (e.g., 2020, 2021). This property is used to identify the year associated with the count of films watched in that year. For example, if a user watched 5 films in the year 2020, the Year property would be set to 2020 for that entry in the FilmsPerYear list.
+    /// </summary>
+    public int Year { get; set; }
+    /// <summary>
+    /// The count of horror films in the journal that were watched in the specified year. This property indicates how many films in the user's horror film collection were watched during that particular year, providing insights into the user's viewing habits over time. For example, if a user watched 5 films in the year 2020, the Count property would be set to 5 for that entry in the FilmsPerYear list.
     /// </summary>
     public int Count { get; set; }
 }
