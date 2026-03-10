@@ -142,7 +142,7 @@ public static class FilmEndpoints
     /// </summary>
     /// <param name="request">The CreateFilmRequest object containing the data to be validated.</param>
     /// <returns>A list of error messages indicating any validation issues found in the request.</returns>
-    private static List<string> ValidateCreateRequest(CreateFilmRequest request)
+    internal static List<string> ValidateCreateRequest(CreateFilmRequest request)
     {
         var errors = new List<string>();
 
@@ -165,7 +165,7 @@ public static class FilmEndpoints
     /// </summary>
     /// <param name="update">The FilmUpdate object containing the data to be validated.</param>
     /// <returns>A list of error messages indicating any validation issues found in the update request.</returns>
-    private static List<string> ValidateUpdateRequest(FilmUpdate update)
+    internal static List<string> ValidateUpdateRequest(FilmUpdate update)
     {
         var errors = new List<string>();
 

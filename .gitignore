@@ -67,3 +67,4 @@ artifacts/
 # Secrets
 appsettings.Production.json
 HorrorJournal.Api/appsettings.Development.json
+.claude/settings.local.json
