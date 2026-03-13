@@ -104,7 +104,7 @@ Settings are managed via `appsettings.json` and `appsettings.Development.json`:
 
 ```json
 {
-  "MongoDbSettings": {
+  "MongoDb": {
     "ConnectionString": "mongodb://localhost:27017",
     "DatabaseName": "horror_journal"
   }
