@@ -25,23 +25,38 @@ public class FilmChangeStreamService(
                 change.OperationType == ChangeStreamOperationType.Update ||
                 change.OperationType == ChangeStreamOperationType.Replace);
 
-        using var cursor = await collection.WatchAsync(pipeline, cancellationToken: stoppingToken);
-
-        _logger.LogInformation("Film change stream started");
-
-        while (await cursor.MoveNextAsync(stoppingToken))
+        IChangeStreamCursor<ChangeStreamDocument<Film>> cursor;
+        try
         {
-            foreach (var change in cursor.Current)
+            cursor = await collection.WatchAsync(pipeline, cancellationToken: stoppingToken);
+        }
+        catch (MongoCommandException ex) when (ex.Message.Contains("replica set"))
+        {
+            _logger.LogWarning(ex,
+                "Change streams require a replica set. "
+                + "Skipping film change stream. "
+                + "Run MongoDB with --replSet to enable this feature.");
+            return;
+        }
+
+        using (cursor)
+        {
+            _logger.LogInformation("Film change stream started");
+
+            while (await cursor.MoveNextAsync(stoppingToken))
             {
-                stoppingToken.ThrowIfCancellationRequested();
+                foreach (var change in cursor.Current)
+                {
+                    stoppingToken.ThrowIfCancellationRequested();
 
-                var title = change.FullDocument?.Title ?? "unknown";
-                var operation = change.OperationType.ToString();
-                var timestamp = change.ClusterTime?.Timestamp ?? 0;
+                    var title = change.FullDocument?.Title ?? "unknown";
+                    var operation = change.OperationType.ToString();
+                    var timestamp = change.ClusterTime?.Timestamp ?? 0;
 
-                _logger.LogInformation(
-                    "Change detected: {Operation} on \"{Title}\" at {Timestamp}",
-                    operation, title, DateTimeOffset.FromUnixTimeSeconds(timestamp));
+                    _logger.LogInformation(
+                        "Change detected: {Operation} on \"{Title}\" at {Timestamp}",
+                        operation, title, DateTimeOffset.FromUnixTimeSeconds(timestamp));
+                }
             }
         }
     }
