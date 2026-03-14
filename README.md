@@ -41,14 +41,14 @@ This starts:
 dotnet run --project HorrorJournal.Api
 ```
 
-The API will be available at `https://localhost:5001`. On first run in Development mode, the database will be seeded with sample films automatically.
+The API will be available at `http://localhost:5073`. On first run in Development mode, the database will be seeded with sample films automatically.
 
 ### 3. Explore the API
 
-Swagger UI is available at:
+The OpenAPI spec is available at:
 
 ```
-https://localhost:5001/swagger
+http://localhost:5073/openapi/v1.json
 ```
 
 ---
@@ -160,10 +160,10 @@ This project is structured to demonstrate the following MongoDB features:
 
 ## Local Dev Tools
 
-| Tool          | URL                            |
-| ------------- | ------------------------------ |
-| API (Swagger) | https://localhost:5001/swagger |
-| mongo-express | http://localhost:8081          |
+| Tool          | URL                                    |
+| ------------- | -------------------------------------- |
+| OpenAPI spec  | http://localhost:5073/openapi/v1.json  |
+| mongo-express | http://localhost:8081                  |
 
 ---
 
